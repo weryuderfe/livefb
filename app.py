@@ -124,6 +124,12 @@ class StreamManager:
             
         return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
+    def rotate_frame(self, frame: np.ndarray, orientation: str) -> np.ndarray:
+        """Rotate the frame based on orientation"""
+        if orientation == "vertical":
+            return cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
+        return frame
+
 # Utility Functions
 def frame_to_image(frame: np.ndarray) -> Image.Image:
     """Convert a numpy array frame to PIL Image"""
@@ -145,6 +151,9 @@ def main():
     
     # File uploader
     uploaded_file = st.file_uploader("Choose a video file", type=['mp4', 'avi', 'mov'])
+    
+    # Orientation selector
+    orientation = st.radio("Video Orientation", ["horizontal", "vertical"], horizontal=True)
     
     if uploaded_file is not None:
         # Save the uploaded file
@@ -179,12 +188,18 @@ def main():
             while st.session_state.stream_manager.is_streaming:
                 frame = st.session_state.stream_manager.get_frame()
                 if frame is not None:
+                    # Rotate frame if needed
+                    frame = st.session_state.stream_manager.rotate_frame(frame, orientation)
                     image = frame_to_image(frame)
+                    
+                    # Adjust dimensions based on orientation
+                    display_width = st.session_state.stream_manager.height if orientation == "vertical" else st.session_state.stream_manager.width
+                    
                     stream_placeholder.image(
                         image,
                         channels="RGB",
                         use_container_width=True,
-                        width=st.session_state.stream_manager.width
+                        width=display_width
                     )
                 else:
                     st.warning("End of video stream reached")
