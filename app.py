@@ -168,7 +168,7 @@ def main():
                 frame = st.session_state.stream_manager.get_frame()
                 if frame is not None:
                     image = frame_to_image(frame)
-                    stream_placeholder.image(image, channels="RGB", use_column_width=True)
+                    stream_placeholder.image(image, channels="RGB", use_container_width=True)
                 else:
                     st.warning("End of video stream reached")
                     st.session_state.stream_manager.stop_stream()
