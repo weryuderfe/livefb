@@ -38,7 +38,12 @@ class VideoSource:
         """Read a frame from the video source"""
         if not self.cap or not self.cap.isOpened():
             return False, None
-        return self.cap.read()
+        ret, frame = self.cap.read()
+        if not ret:
+            # Reset video to beginning when it reaches the end
+            self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            ret, frame = self.cap.read()
+        return ret, frame
     
     def release(self):
         """Release the video capture"""
@@ -59,6 +64,8 @@ class StreamManager:
         self.video_source = VideoSource(video_path)
         self.is_streaming = False
         self.ffmpeg_process = None
+        self.width = None
+        self.height = None
         
     def start_stream(self) -> bool:
         """Start the video stream"""
@@ -70,10 +77,11 @@ class StreamManager:
 
             success = self.video_source.start()
             if success:
-                width, height = self.video_source.get_dimensions()
+                self.width, self.height = self.video_source.get_dimensions()
                 command = [
                     'ffmpeg',
                     '-re',
+                    '-stream_loop', '-1',  # Loop the input infinitely
                     '-i', self.video_source.source,
                     '-c:v', 'libx264',
                     '-preset', 'veryfast',
@@ -163,12 +171,21 @@ def main():
             # Create a placeholder for the video stream
             stream_placeholder = st.empty()
             
+            # Display video dimensions
+            if st.session_state.stream_manager.width and st.session_state.stream_manager.height:
+                st.info(f"Video dimensions: {st.session_state.stream_manager.width}x{st.session_state.stream_manager.height}")
+            
             # Main streaming loop
             while st.session_state.stream_manager.is_streaming:
                 frame = st.session_state.stream_manager.get_frame()
                 if frame is not None:
                     image = frame_to_image(frame)
-                    stream_placeholder.image(image, channels="RGB", use_container_width=True)
+                    stream_placeholder.image(
+                        image,
+                        channels="RGB",
+                        use_container_width=True,
+                        width=st.session_state.stream_manager.width
+                    )
                 else:
                     st.warning("End of video stream reached")
                     st.session_state.stream_manager.stop_stream()
