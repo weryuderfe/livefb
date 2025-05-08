@@ -64,7 +64,11 @@ class StreamManager:
         self.video_source = VideoSource(video_path)
         self.is_streaming = False
         self.ffmpeg_process = None
-        self.dimensions = None
+        self._dimensions = None
+        
+    @property
+    def dimensions(self) -> Optional[Tuple[int, int]]:
+        return self._dimensions
         
     def start_stream(self) -> bool:
         """Start the video stream"""
@@ -76,7 +80,7 @@ class StreamManager:
 
             success = self.video_source.start()
             if success:
-                self.dimensions = self.video_source.get_dimensions()
+                self._dimensions = self.video_source.get_dimensions()
                 command = [
                     'ffmpeg',
                     '-re',
@@ -131,10 +135,10 @@ class StreamManager:
 
     def get_display_dimensions(self, orientation: str) -> Tuple[int, int]:
         """Get display dimensions based on orientation"""
-        if not self.dimensions:
+        if not self._dimensions:
             return StreamConfig.WINDOW_WIDTH, StreamConfig.WINDOW_HEIGHT
         
-        width, height = self.dimensions
+        width, height = self._dimensions
         if orientation == "vertical":
             return height, width
         return width, height
