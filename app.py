@@ -64,8 +64,7 @@ class StreamManager:
         self.video_source = VideoSource(video_path)
         self.is_streaming = False
         self.ffmpeg_process = None
-        self.width = None
-        self.height = None
+        self.dimensions = None
         
     def start_stream(self) -> bool:
         """Start the video stream"""
@@ -77,7 +76,7 @@ class StreamManager:
 
             success = self.video_source.start()
             if success:
-                self.width, self.height = self.video_source.get_dimensions()
+                self.dimensions = self.video_source.get_dimensions()
                 command = [
                     'ffmpeg',
                     '-re',
@@ -130,6 +129,16 @@ class StreamManager:
             return cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
         return frame
 
+    def get_display_dimensions(self, orientation: str) -> Tuple[int, int]:
+        """Get display dimensions based on orientation"""
+        if not self.dimensions:
+            return StreamConfig.WINDOW_WIDTH, StreamConfig.WINDOW_HEIGHT
+        
+        width, height = self.dimensions
+        if orientation == "vertical":
+            return height, width
+        return width, height
+
 # Utility Functions
 def frame_to_image(frame: np.ndarray) -> Image.Image:
     """Convert a numpy array frame to PIL Image"""
@@ -180,9 +189,10 @@ def main():
             # Create a placeholder for the video stream
             stream_placeholder = st.empty()
             
-            # Display video dimensions
-            if st.session_state.stream_manager.width and st.session_state.stream_manager.height:
-                st.info(f"Video dimensions: {st.session_state.stream_manager.width}x{st.session_state.stream_manager.height}")
+            # Display video dimensions if available
+            if st.session_state.stream_manager.dimensions:
+                width, height = st.session_state.stream_manager.dimensions
+                st.info(f"Original video dimensions: {width}x{height}")
             
             # Main streaming loop
             while st.session_state.stream_manager.is_streaming:
@@ -192,9 +202,10 @@ def main():
                     frame = st.session_state.stream_manager.rotate_frame(frame, orientation)
                     image = frame_to_image(frame)
                     
-                    # Adjust dimensions based on orientation
-                    display_width = st.session_state.stream_manager.height if orientation == "vertical" else st.session_state.stream_manager.width
+                    # Get display dimensions based on orientation
+                    display_width, display_height = st.session_state.stream_manager.get_display_dimensions(orientation)
                     
+                    # Display the frame
                     stream_placeholder.image(
                         image,
                         channels="RGB",
