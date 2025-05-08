@@ -6,6 +6,7 @@ from typing import Optional, Tuple
 import tempfile
 import os
 import subprocess
+import shutil
 
 # Configuration
 class StreamConfig:
@@ -62,6 +63,11 @@ class StreamManager:
     def start_stream(self) -> bool:
         """Start the video stream"""
         if not self.is_streaming:
+            # Check if ffmpeg is available
+            if not shutil.which('ffmpeg'):
+                st.error("ffmpeg is not installed. Please install ffmpeg to enable streaming.")
+                return False
+
             success = self.video_source.start()
             if success:
                 width, height = self.video_source.get_dimensions()
